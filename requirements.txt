@@ -1,1 +1,5 @@
-pyyaml
+Click==7.0
+gitdb2==2.0.6
+GitPython==3.0.5
+PyYAML==5.3
+smmap2==2.0.5
