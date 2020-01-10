@@ -7,11 +7,13 @@ import os
 
 
 class GitHubDownloader(object):
-  def __init__(self, repo, target, branch, tag):
+  def __init__(self, repo, target, branch, tag, override, use_ssh):
     self.repo = repo
     self.target = target
     self.branch = branch
     self.tag = tag
+    self.override = override
+    self.use_ssh = use_ssh
 
   def get_repo_name(self, fullname):
     # Check the fullname for the format "username/reponame"
@@ -23,7 +25,10 @@ class GitHubDownloader(object):
     return result.group(2)
     
   def download(self):
-    link = 'https://github.com/{}.git'.format(self.repo)
+    if self.use_ssh:
+      link = 'git@github.com:/{}.git'.format(self.repo)
+    else:
+      link = 'https://github.com/{}.git'.format(self.repo)
     
     repo_folder = self.get_repo_name(self.repo)
 
@@ -35,13 +40,38 @@ class GitHubDownloader(object):
     # Check if the folder exists. If it does, do git pull and
     # update the repository. If not, clone the repository
     if os.path.isdir(repo_path):
-      print('  🔄 Updating "{}"'.format(repo_path))
+      print('🔄 Updating "{}"'.format(repo_path))
       repo = Repo(repo_path)
+
+      # If there are some local changes in the repo display the warning
+      if repo.is_dirty():
+        print('🚧 Repo has local changes!')
+
       origin = repo.remotes.origin
-      origin.pull()
+
+      branch = None
+
+      try:
+        branch = repo.active_branch
+      except TypeError:
+        branch = None
+
+      if branch:
+        origin.pull()
+      else:
+        origin.fetch()
     else:
-      print('  🚚 Cloning "{}" to "{}"'.format(link, repo_path))
-      Repo.clone_from(link, repo_path)
+      print('🚚 Cloning "{}" to "{}"'.format(link, repo_path))
+      repo = Repo.clone_from(link, repo_path)
+
+    # Checkout the branch and override any local changes
+    # if the option is set
+    if self.tag:
+      print('🏷 Tag: {}'.format(self.tag))
+      repo.git.checkout(self.tag, force=self.override)
+    else:
+      print('🌳 Branch: {}'.format(self.branch))
+      repo.git.checkout(self.branch, force=self.override)
 
 
 class Download(object):
@@ -62,9 +92,11 @@ class Download(object):
         repo = dict_entry['github']
         self.check_to(dict_entry)
         target = dict_entry['to']
-        branch = dict_entry.get('branch', None)
+        branch = dict_entry.get('branch', 'master')
         tag = dict_entry.get('tag', None)
-        self.downloader = GitHubDownloader(repo, target, branch, tag)
+        override = dict_entry.get('override', False)
+        use_ssh = dict_entry.get('ssh', False)
+        self.downloader = GitHubDownloader(repo, target, branch, tag, override, use_ssh)
     
   def process(self):
     self.downloader.download()
