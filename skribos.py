@@ -4,7 +4,10 @@ from git import Repo, Git, RemoteProgress
 import sys
 import re
 import os
+import subprocess
 
+class RecipeError(Exception):
+  pass
 
 class GitHubDownloader(object):
   def __init__(self, repo, target, branch, tag, override, use_ssh):
@@ -33,24 +36,33 @@ class GitHubDownloader(object):
     repo_folder = self.get_repo_name(self.repo)
 
     if not repo_folder:
-      raise Exception('Bad GitHub Repository: {}'.format(self.repo))
+      raise RecipeError('Bad GitHub Repository: {}'.format(self.repo))
 
     repo_path = "{}/{}".format(self.target, repo_folder)
+
+    repo = None
 
     # Check if the folder exists. If it does, do git pull and
     # update the repository. If not, clone the repository
     if os.path.isdir(repo_path):
       print('🔄 Updating "{}"'.format(repo_path))
+
       repo = Repo(repo_path)
 
       # If there are some local changes in the repo display the warning
       if repo.is_dirty():
         print('🚧 Repo has local changes!')
 
+        if not self.override:
+          raise RecipeError('Can\'t update Repo because of local changes!')
+
       origin = repo.remotes.origin
 
       branch = None
 
+      # Check if the repository has an active branch.
+      # If a tag is checked out, there is not active branch and
+      # pulling will not work.
       try:
         branch = repo.active_branch
       except TypeError:
@@ -64,14 +76,17 @@ class GitHubDownloader(object):
       print('🚚 Cloning "{}" to "{}"'.format(link, repo_path))
       repo = Repo.clone_from(link, repo_path)
 
-    # Checkout the branch and override any local changes
-    # if the option is set
-    if self.tag:
-      print('🏷 Tag: {}'.format(self.tag))
-      repo.git.checkout(self.tag, force=self.override)
-    else:
-      print('🌳 Branch: {}'.format(self.branch))
-      repo.git.checkout(self.branch, force=self.override)
+    if repo:
+      if self.tag:
+        # Checkout the tag and override any local changes
+        # if the option is set
+        print('🏷 Tag: {}'.format(self.tag))
+        repo.git.checkout(self.tag, force=self.override)
+      else:
+        # Checkout the branch and override any local changes
+        # if the option is set
+        print('🌳 Branch: {}'.format(self.branch))
+        repo.git.checkout(self.branch, force=self.override)
 
 
 class Download(object):
@@ -83,7 +98,7 @@ class Download(object):
         to = dict_entry['to'].strip()
     
     if not to:
-      raise Exception('Target (to:) not found in download: {}!'.format(dict_entry))
+      raise RecipeError('Target (to:) not found in download: {}!'.format(dict_entry))
     
   def __init__(self, dict_entry):
       self.downloader = None
@@ -100,6 +115,50 @@ class Download(object):
     
   def process(self):
     self.downloader.download()
+
+class Job(object):
+  def __init__(self, job_dict, file_list, build_vars):
+    self.job_dict = job_dict
+
+    if 'name' not in job_dict:
+      raise RecipeError('Job without name: {}'.format(job_dict))
+
+    if 'command' not in job_dict:
+      raise RecipeError('Job without command: {}'.format(job_dict))    
+
+    print(job_dict)
+
+    self.vars = build_vars
+    self.file_list = file_list
+
+  def replace_placeholders(self, command):
+    for key, value in self.vars.items():
+      command = command.replace('${}'.format(key), value)
+    
+    command = command.replace('$files', self.file_list)
+    
+    return command
+
+  def process(self):
+    print('🌀 Processing Job: {}'.format(self.job_dict['name']))
+    command = self.replace_placeholders(self.job_dict['command'])
+    subprocess.check_output(command, shell=True)
+
+
+class Builder(object):
+  def __init__(self, build_dict, file_list):
+    self.files = file_list
+
+    build_vars = build_dict.get('vars', [])
+
+    if 'jobs' not in build_dict or not isinstance(build_dict['jobs'], list):
+      raise RecipeError('No jobs (jobs:) found!')
+
+    self.jobs = list(map(lambda j: Job(j, file_list, build_vars), build_dict['jobs']))
+
+  def process(self):
+    for job in self.jobs:
+      job.process()
 
 class Skribos(object):
   def __init__(self):
@@ -130,29 +189,52 @@ class Skribos(object):
             else:
                 chapters = None
         else:
-            raise Exception('Chapters not found in recipe!')
+            raise RecipeError('Chapters not found in recipe!')
+
+        self.chapters = chapters
+
+        if 'build' in recipe:
+          build = recipe['build']
+          builder = Builder(build, self.get_filelist_as_line())
+          builder.process()
+        else:
+          raise RecipeError('Build information not found in recipe!')
   
   def download_all(self):
     for download in self.downloads:
       download.process()
     
-  def get_filelist(self):
-    pass
+  def get_filelist_as_line(self):
+    return " ".join(map(lambda c: '"{}"'.format(c), self.chapters))
 
-
+  def check_chapters(self):
+    for chapter in self.chapters:
+      if not os.path.isfile(chapter):
+        raise RecipeError('File "{}" not found!'.format(chapter))
 
 @click.command()
 @click.option('--recipe', prompt='Skribos Recipe', help='Yaml file with skribos recipe')
-def main(recipe):
+@click.option('--nodownload', is_flag=True)
+def main(recipe, nodownload):
   skribos = Skribos()
 
-  print('📃 Read recipe "{}"'.format(recipe))
+  print('📃 Read skribos recipe "{}"'.format(recipe))
   skribos.load(recipe)
   
-  print('📦 Downloading resources...')
-  skribos.download_all()
-  print('✅ Downloads finished!')
+  if not nodownload:
+    print('📦 Downloading resources...')
+    skribos.download_all()
+    print('✅ Downloads finished!')
+
+  skribos.check_chapters()
+
+  print(skribos.get_filelist_as_line())
+
+  print('✅ Skribos is done!')
 
 if __name__ == '__main__':
-  main()
+  try:
+    main()
+  except RecipeError as error:
+    print('🛑 Recipe error: {}'.format(error))  
   
