@@ -126,8 +126,6 @@ class Job(object):
     if 'command' not in job_dict:
       raise RecipeError('Job without command: {}'.format(job_dict))    
 
-    print(job_dict)
-
     self.vars = build_vars
     self.file_list = file_list
 
@@ -164,6 +162,7 @@ class Skribos(object):
   def __init__(self):
     self.downloads = None
     self.chapters = None
+    self.builder = None
   
   def load(self, filename):
     with open(filename) as file:
@@ -196,7 +195,7 @@ class Skribos(object):
         if 'build' in recipe:
           build = recipe['build']
           builder = Builder(build, self.get_filelist_as_line())
-          builder.process()
+          self.builder = builder
         else:
           raise RecipeError('Build information not found in recipe!')
   
@@ -211,6 +210,9 @@ class Skribos(object):
     for chapter in self.chapters:
       if not os.path.isfile(chapter):
         raise RecipeError('File "{}" not found!'.format(chapter))
+
+  def build(self):
+    self.builder.process()
 
 @click.command()
 @click.option('--recipe', prompt='Skribos Recipe', help='Yaml file with skribos recipe')
@@ -228,7 +230,7 @@ def main(recipe, nodownload):
 
   skribos.check_chapters()
 
-  print(skribos.get_filelist_as_line())
+  skribos.build()
 
   print('✅ Skribos is done!')
 
