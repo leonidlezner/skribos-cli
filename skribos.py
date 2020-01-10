@@ -2,6 +2,9 @@ import yaml
 import click
 from git import Repo, Git, RemoteProgress
 import sys
+import re
+import os
+
 
 class GitHubDownloader(object):
   def __init__(self, repo, target, branch, tag):
@@ -9,28 +12,36 @@ class GitHubDownloader(object):
     self.target = target
     self.branch = branch
     self.tag = tag
+
+  def get_repo_name(self, fullname):
+    # Check the fullname for the format "username/reponame"
+    result = re.search("^([\w\-\.]+)/([\w\-\.]+)$", fullname)
+
+    if not result:
+      return None
+
+    return result.group(2)
     
   def download(self):
     link = 'https://github.com/{}.git'.format(self.repo)
     
-    # get the folder name of the repo
-    # check if repo is a git folder
-    # pull if git
-    # clone if not found
-    
-    repo = Repo(self.target)
-    
+    repo_folder = self.get_repo_name(self.repo)
 
-    print('🔄 Updating "{}"'.format(self.target))    
-    origin = repo.remotes.origin
-    origin.pull()
-    
-    print('📦 Cloning "{}" to "{}"'.format(link, self.target))
-    
-    
-#    with tqdm(total=100) as pbar:
-    #Repo.clone_from(link, self.target)
-    
+    if not repo_folder:
+      raise Exception('Bad GitHub Repository: {}'.format(self.repo))
+
+    repo_path = "{}/{}".format(self.target, repo_folder)
+
+    # Check if the folder exists. If it does, do git pull and
+    # update the repository. If not, clone the repository
+    if os.path.isdir(repo_path):
+      print('  🔄 Updating "{}"'.format(repo_path))
+      repo = Repo(repo_path)
+      origin = repo.remotes.origin
+      origin.pull()
+    else:
+      print('  🚚 Cloning "{}" to "{}"'.format(link, repo_path))
+      Repo.clone_from(link, repo_path)
 
 
 class Download(object):
@@ -45,7 +56,6 @@ class Download(object):
       raise Exception('Target (to:) not found in download: {}!'.format(dict_entry))
     
   def __init__(self, dict_entry):
-      print(dict_entry)
       self.downloader = None
       
       if 'github' in dict_entry:
@@ -103,8 +113,13 @@ class Skribos(object):
 @click.option('--recipe', prompt='Skribos Recipe', help='Yaml file with skribos recipe')
 def main(recipe):
   skribos = Skribos()
+
+  print('📃 Read recipe "{}"'.format(recipe))
   skribos.load(recipe)
+  
+  print('📦 Downloading resources...')
   skribos.download_all()
+  print('✅ Downloads finished!')
 
 if __name__ == '__main__':
   main()
