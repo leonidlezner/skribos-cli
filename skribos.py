@@ -144,10 +144,13 @@ class Job(object):
 
 
 class Builder(object):
-  def __init__(self, build_dict, file_list):
+  def __init__(self, build_dict, file_list, override_vars):
     self.files = file_list
 
-    build_vars = build_dict.get('vars', [])
+    build_vars = build_dict.get('vars', {})
+    
+    # Merge variables provided over CLI
+    build_vars.update(override_vars)
 
     if 'jobs' not in build_dict or not isinstance(build_dict['jobs'], list):
       raise RecipeError('No jobs (jobs:) found!')
@@ -164,7 +167,7 @@ class Skribos(object):
     self.chapters = None
     self.builder = None
   
-  def load(self, filename):
+  def load(self, filename, override_vars):
     with open(filename) as file:
         recipe = yaml.load(file, Loader=yaml.Loader)
         
@@ -194,7 +197,7 @@ class Skribos(object):
 
         if 'build' in recipe:
           build = recipe['build']
-          builder = Builder(build, self.get_filelist_as_line())
+          builder = Builder(build, self.get_filelist_as_line(), override_vars)
           self.builder = builder
         else:
           raise RecipeError('Build information not found in recipe!')
@@ -216,12 +219,18 @@ class Skribos(object):
 
 @click.command()
 @click.option('--recipe', prompt='Skribos Recipe', help='Yaml file with skribos recipe')
+@click.option('--output', prompt='Output directory', help='Output directory variable for the recipe', default=None)
 @click.option('--nodownload', is_flag=True)
-def main(recipe, nodownload):
+def main(recipe, nodownload, output):
   skribos = Skribos()
 
+  vars_from_cli = {}
+  
+  if output:
+    vars_from_cli['output'] = output
+  
   print('📃 Read skribos recipe "{}"'.format(recipe))
-  skribos.load(recipe)
+  skribos.load(recipe, override_vars=vars_from_cli)
   
   if not nodownload:
     print('📦 Downloading resources...')
