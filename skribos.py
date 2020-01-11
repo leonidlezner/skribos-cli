@@ -220,11 +220,18 @@ class Skribos(object):
   def build(self):
     self.builder.process()
 
+
+def version():
+  dir_path = os.path.dirname(os.path.realpath(__file__))
+  repo = Repo(dir_path)
+  return repo.git.describe()
+  
+
 @click.command()
-@click.option('--recipe', help='Yaml file with skribos recipe', required=True)
+@click.option('--recipe', help='Yaml file with Skribos recipe', required=True)
 @click.option('--output', help='Output directory variable for the recipe', default=None)
 @click.option('--nodownload', is_flag=True, help='Skip downloading, just build the recipes')
-def main(recipe, nodownload, output):
+def main(recipe, nodownload, output):  
   skribos = Skribos()
 
   vars_from_cli = {}
@@ -232,7 +239,7 @@ def main(recipe, nodownload, output):
   if output:
     vars_from_cli['output'] = output
   
-  print('📃 Read skribos recipe "{}"'.format(recipe))
+  print('📃 Read Skribos recipe "{}"'.format(recipe))
   skribos.load(recipe, override_vars=vars_from_cli)
   
   if not nodownload:
@@ -251,6 +258,7 @@ def main(recipe, nodownload, output):
 
 if __name__ == '__main__':
   try:
+    print('Running Skribos {}'.format(version()))
     main()
   except RecipeError as error:
     print('❌ Skribos Error! {}'.format(error))
