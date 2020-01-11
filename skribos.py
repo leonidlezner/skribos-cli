@@ -138,7 +138,7 @@ class Job(object):
     return command
 
   def process(self):
-    print('🌀 Processing Job: {}'.format(self.job_dict['name']))
+    print('🚀 Running Job: {}'.format(self.job_dict['name']))
     command = self.replace_placeholders(self.job_dict['command'])
     subprocess.check_output(command, shell=True)
 
@@ -241,14 +241,15 @@ def main(recipe, nodownload, output):
     print('✅ Downloads finished!')
 
   skribos.check_chapters()
-
   skribos.build()
 
   print('✅ Skribos is done!')
+
 
 if __name__ == '__main__':
   try:
     main()
   except RecipeError as error:
-    print('❌ Skribos Error! {}'.format(error))  
+    print('❌ Skribos Error! {}'.format(error))
+    exit(1)
   
