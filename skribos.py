@@ -206,11 +206,8 @@ class Skribos(object):
           raise RecipeError('Build information not found in recipe!')
   
   def download_all(self):
-    if self.downloads:
-      for download in self.downloads:
-        download.process()
-    else:
-      print('⚠️ No downloads are defined')
+    for download in self.downloads:
+      download.process()
     
   def get_filelist_as_line(self):
     return " ".join(map(lambda c: '"{}"'.format(c), self.chapters))
@@ -239,9 +236,12 @@ def main(recipe, nodownload, output):
   skribos.load(recipe, override_vars=vars_from_cli)
   
   if not nodownload:
-    print('📦 Downloading resources...')
-    skribos.download_all()
-    print('✅ Downloads finished!')
+    if self.downloads:
+      print('📦 Downloading resources...')
+      skribos.download_all()
+      print('✅ Downloads finished!')
+    else:
+      print('😳 No downloads are defined')
 
   skribos.check_chapters()
   skribos.build()
