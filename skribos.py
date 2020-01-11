@@ -168,6 +168,9 @@ class Skribos(object):
     self.builder = None
   
   def load(self, filename, override_vars):
+    if not os.path.isfile(filename):
+      raise RecipeError('Recipe file not found: {}'.format(filename))
+
     with open(filename) as file:
         recipe = yaml.load(file, Loader=yaml.Loader)
         
@@ -218,9 +221,9 @@ class Skribos(object):
     self.builder.process()
 
 @click.command()
-@click.option('--recipe', prompt='Skribos Recipe', help='Yaml file with skribos recipe')
-@click.option('--output', prompt='Output directory', help='Output directory variable for the recipe', default=None)
-@click.option('--nodownload', is_flag=True)
+@click.option('--recipe', help='Yaml file with skribos recipe', required=True)
+@click.option('--output', help='Output directory variable for the recipe', default=None)
+@click.option('--nodownload', is_flag=True, help='Skip downloading, just build the recipes')
 def main(recipe, nodownload, output):
   skribos = Skribos()
 
@@ -247,5 +250,5 @@ if __name__ == '__main__':
   try:
     main()
   except RecipeError as error:
-    print('🛑 Recipe error: {}'.format(error))  
+    print('❌ Skribos Error! {}'.format(error))  
   
