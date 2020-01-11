@@ -236,7 +236,7 @@ def main(recipe, nodownload, output):
   skribos.load(recipe, override_vars=vars_from_cli)
   
   if not nodownload:
-    if self.downloads:
+    if skribos.downloads:
       print('📦 Downloading resources...')
       skribos.download_all()
       print('✅ Downloads finished!')
