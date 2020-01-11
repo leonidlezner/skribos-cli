@@ -206,8 +206,11 @@ class Skribos(object):
           raise RecipeError('Build information not found in recipe!')
   
   def download_all(self):
-    for download in self.downloads:
-      download.process()
+    if self.downloads:
+      for download in self.downloads:
+        download.process()
+    else:
+      print('⚠️ No downloads are defined')
     
   def get_filelist_as_line(self):
     return " ".join(map(lambda c: '"{}"'.format(c), self.chapters))
