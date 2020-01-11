@@ -132,3 +132,5 @@ ext-chapters/
 external/
 
 .vscode/
+
+.DS_Store
