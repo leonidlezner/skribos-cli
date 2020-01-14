@@ -3,4 +3,3 @@ gitdb2
 GitPython
 PyYAML
 smmap2
-pytest
