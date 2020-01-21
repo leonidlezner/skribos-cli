@@ -134,3 +134,5 @@ external/
 .vscode/
 
 .DS_Store
+
+tmp/

@@ -1,0 +1,13 @@
+downloads:
+    - github: Wohnzimmer-FM/lernos-common
+      to: tmp
+    - github: Wohnzimmer-FM/lernos-media
+      to: tmp
+    - github: Wandmalfarbe/pandoc-latex-template
+      tag: v1.3.1
+      to: tmp
+  
+chapters:
+    - blabla
+
+build:

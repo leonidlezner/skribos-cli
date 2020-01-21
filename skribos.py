@@ -147,15 +147,15 @@ class Builder(object):
   def __init__(self, build_dict, file_list, override_vars):
     self.files = file_list
 
-    build_vars = build_dict.get('vars', {})
-    
-    # Merge variables provided over CLI
-    build_vars.update(override_vars)
+    if build_dict:
+      build_vars = build_dict.get('vars', {})
+      # Merge variables provided over CLI
+      build_vars.update(override_vars)
 
-    if 'jobs' not in build_dict or not isinstance(build_dict['jobs'], list):
-      raise RecipeError('No jobs (jobs:) found!')
+      if 'jobs' not in build_dict or not isinstance(build_dict['jobs'], list):
+        raise RecipeError('No jobs (jobs:) found!')
 
-    self.jobs = list(map(lambda j: Job(j, file_list, build_vars), build_dict['jobs']))
+      self.jobs = list(map(lambda j: Job(j, file_list, build_vars), build_dict['jobs']))
 
   def process(self):
     for job in self.jobs:
