@@ -18,6 +18,8 @@ function update_repo() {
     fi
 }
 
+update_repo https://github.com/leonidlezner/skribos-cli.git master
+
 filename=${1-"external.txt"}
 
 while read -r line || [ -n "$line" ]; do
