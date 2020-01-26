@@ -25,7 +25,8 @@ function prepare_target {
 
 function convert_pdf {
     echo "Creating PDF format..."
-    pandoc -o $output/$base.pdf -V lang=$language -V date="$version" --template=$pdf_template --defaults $defaults
+    pandoc -o $output/$base.pdf -V lang=$language -V date="$version" \
+        --template=$pdf_template --defaults $defaults
     
     echo "Creating cover image..."
     convert -density 300 $output/$base.pdf[0] $output/ebook-cover.png
@@ -33,7 +34,8 @@ function convert_pdf {
 
 function convert_epub {
     echo "Creating EPUB format..."
-    pandoc -s -o $output/$base.epub --epub-cover-image=$output/ebook-cover.png -V date="$version" --defaults $defaults
+    pandoc -s -o $output/$base.epub --epub-cover-image=$output/ebook-cover.png \
+        -V date="$version" --defaults $defaults
 }
 
 function convert_mobi {
@@ -48,7 +50,11 @@ function convert_docx {
 
 function convert_html {
     echo "Creating HTML format..."
-    pandoc -o $output/$base.html -V lang=$language -V date="$version" --extract-media ./images --defaults $defaults
+    pandoc -o $output/$base.html -V lang=$language -V date="$version" \
+        --extract-media ./images --defaults $defaults --toc \
+        --template ./resources/theme/lernos.html \
+        -V base=$base
+    
     cp -r ./images $output && rm -r ./images
 }
 
