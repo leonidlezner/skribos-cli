@@ -50,7 +50,7 @@ function convert_docx {
 
 function convert_html {
     echo "Creating HTML format..."
-    pandoc -o $output/$base.html -V lang=$language -V date="$version" \
+    pandoc -o $output/index.html -V lang=$language -V date="$version" \
         --extract-media ./images --defaults $defaults --toc \
         --template ./resources/theme/lernos.html \
         -V base=$base
